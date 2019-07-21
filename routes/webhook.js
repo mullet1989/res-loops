@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router(); // new router for webhooks
 const axios = require("axios");
+const fetchActivity = require("../utils").fetchActivity;
 
 const subscriptionUrl = "https://api.strava.com/api/v3/push_subscriptions";
 const clientId = 563;
@@ -24,7 +25,7 @@ axios
           .post(subscriptionUrl, {
             client_id: clientId,
             client_secret: clientSecret,
-            callback_url: `${process.env.NGROK}/auth`, //ngrok url in here for local development
+            callback_url: `${process.env.NGROK}/webhook`, //ngrok url in here for local development
             verify_token: process.env.VERIFY_TOKEN || ""
           })
           .then(res => {
@@ -60,4 +61,49 @@ router.get("/", function(req, res, next) {
   }
 });
 
+router.post("/", async (req, res, next) => {
+  console.log("webhook event received!", req.query, req.body);
+
+  const data = req.body;
+  const {
+    object_type: objectType,
+    object_id: objectId,
+    aspect_type: aspectType,
+    updates,
+    owner_id: athleteId,
+    subscription_id: subscriptionId,
+    event_time: eventTime
+  } = { ...data };
+
+  let stravaResponse;
+  switch (aspectType) {
+    case "create":
+      // todo : do something in here
+      const { data: activity } =
+        (await fetchActivity(objectId, athleteId)) || "something is not right";
+      for (let segment of activity["segment_efforts"]) {
+        if (segmentIds.has(segment.id)) {
+          // increment the counter
+          if (segment.id in leaderboard) {
+            let currentCount = leaderboard[segment.id][activity.athlete.id];
+            leaderboard[segment.id][activity.athlete.id] = currentCount + 1;
+          } else {
+            leaderboard[segment.id] = {};
+            leaderboard[segment.id][activity.athlete.id] = 1;
+          }
+        }
+      }
+      res.sendStatus(200); // acknowledge
+      break;
+    default:
+      console.log("only processing create");
+      break;
+  }
+});
+
+const segmentIds = new Set([63951472299]);
+
+const leaderboard = {};
+
 module.exports = router;
+module.exports.leaderboard = leaderboard;
