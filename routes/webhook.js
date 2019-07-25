@@ -2,39 +2,73 @@ const express = require("express");
 const router = express.Router(); // new router for webhooks
 const axios = require("axios");
 const fetchActivity = require("../utils").fetchActivity;
+const querystring = require("querystring");
 
 const subscriptionUrl = "https://api.strava.com/api/v3/push_subscriptions";
 const clientId = 563;
 const clientSecret = process.env.CLIENT_SECRET || "";
 
+const client = require("../database");
+
+const newSubscription = async () => {
+  return new Promise((resolve, reject) => {
+    const obj = {
+      client_id: clientId,
+      client_secret: clientSecret,
+      callback_url: `${process.env.NGROK}/webhook`, //ngrok url in here for local development;
+      verify_token: process.env.VERIFY_TOKEN.toString() || ""
+    };
+
+    axios({
+      method: "post",
+      url: subscriptionUrl,
+      data: querystring.stringify(obj),
+      config: { headers: { "Content-Type": "x-www-form-urlencoded" } }
+    })
+      .then(res => resolve({ success: true }))
+      .catch(res => {
+        reject({ success: false });
+      });
+  });
+};
+
+const deleteSubscription = async id => {
+  return new Promise((resolve, reject) => {
+    axios
+      .delete(
+        `${subscriptionUrl}/${id}?client_id=${clientId}&client_secret=${clientSecret}`
+      )
+      .then(res => {
+        resolve(res);
+      })
+      .catch(res => {
+        reject(res);
+      });
+  });
+};
+
 // GET subscriptions
 axios
   .get(`${subscriptionUrl}?client_id=${clientId}&client_secret=${clientSecret}`)
-  .then(res => {
-    // DELETE subscriptions
-    // todo : get subscription id
-    axios
-      .delete(subscriptionUrl, {
-        id: "",
-        client_id: clientId,
-        client_secret: clientSecret
-      })
-      .then(res => {
-        // POST subscription
-        axios
-          .post(subscriptionUrl, {
-            client_id: clientId,
-            client_secret: clientSecret,
-            callback_url: `${process.env.NGROK}/webhook`, //ngrok url in here for local development
-            verify_token: process.env.VERIFY_TOKEN || ""
-          })
-          .then(res => {
-            console.log(res.response);
-          });
-      })
-      .catch(res => console.log(res));
+  .then(async res => {
+    if (res.data.length < 1) {
+      const responseBody = await newSubscription();
+      console.log(responseBody);
+
+    } else {
+      const sub = res.data[0];
+      // DELETE subscriptions
+      await deleteSubscription(sub.id);
+      // POST subscription
+      const { success } = { ...(await newSubscription()) };
+      if (success) {
+        console.log("this was a success");
+      }
+    }
   })
-  .catch(res => console.log(res.status));
+  .catch(res => {
+    console.log(res);
+  });
 
 /**
  *
