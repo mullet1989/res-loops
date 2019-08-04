@@ -31,6 +31,8 @@ const newSubscription = async () => {
     })
       .then(res => resolve({ success: true }))
       .catch(res => {
+        console.log(res.message);
+        console.log(res);
         reject({ success: false });
       });
   });
