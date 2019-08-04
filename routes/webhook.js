@@ -1,14 +1,15 @@
 const express = require("express");
 const router = express.Router(); // new router for webhooks
 const axios = require("axios");
-const fetchActivity = require("../utils").fetchActivity;
 const querystring = require("querystring");
 
+const { RedisClient, StravaClient } = require("../database");
 const subscriptionUrl = "https://api.strava.com/api/v3/push_subscriptions";
 const clientId = 563;
 const clientSecret = process.env.CLIENT_SECRET || "";
 
-const client = require("../database");
+// todo : populate all the segments in here
+const segmentIds = new Set([853217]);
 
 const newSubscription = async () => {
   return new Promise((resolve, reject) => {
@@ -16,14 +17,14 @@ const newSubscription = async () => {
       client_id: clientId,
       client_secret: clientSecret,
       callback_url: `${process.env.NGROK}/webhook`, //ngrok url in here for local development;
-      verify_token: process.env.VERIFY_TOKEN.toString() || ""
+      verify_token: process.env.VERIFY_TOKEN.toString() || "",
     };
 
     axios({
       method: "post",
       url: subscriptionUrl,
       data: querystring.stringify(obj),
-      config: { headers: { "Content-Type": "x-www-form-urlencoded" } }
+      config: { headers: { "Content-Type": "x-www-form-urlencoded" } },
     })
       .then(res => resolve({ success: true }))
       .catch(res => {
@@ -39,6 +40,7 @@ const deleteSubscription = async id => {
         `${subscriptionUrl}/${id}?client_id=${clientId}&client_secret=${clientSecret}`
       )
       .then(res => {
+        console.log("SUBSCRIPTION DELETED");
         resolve(res);
       })
       .catch(res => {
@@ -48,27 +50,29 @@ const deleteSubscription = async id => {
 };
 
 // GET subscriptions
-axios
-  .get(`${subscriptionUrl}?client_id=${clientId}&client_secret=${clientSecret}`)
-  .then(async res => {
-    if (res.data.length < 1) {
-      const responseBody = await newSubscription();
-      console.log(responseBody);
-
-    } else {
-      const sub = res.data[0];
-      // DELETE subscriptions
-      await deleteSubscription(sub.id);
-      // POST subscription
-      const { success } = { ...(await newSubscription()) };
-      if (success) {
-        console.log("this was a success");
+false &&
+  axios
+    .get(
+      `${subscriptionUrl}?client_id=${clientId}&client_secret=${clientSecret}`
+    )
+    .then(async res => {
+      if (res.data.length < 1) {
+        const responseBody = await newSubscription();
+        console.log(responseBody);
+      } else {
+        const sub = res.data[0];
+        // DELETE subscriptions
+        await deleteSubscription(sub.id);
+        // POST subscription
+        const { success } = { ...(await newSubscription()) };
+        if (success) {
+          console.log("NEW SUBSCRIPTION CREATED");
+        }
       }
-    }
-  })
-  .catch(res => {
-    console.log(res);
-  });
+    })
+    .catch(res => {
+      console.log(res);
+    });
 
 /**
  *
@@ -106,38 +110,57 @@ router.post("/", async (req, res, next) => {
     updates,
     owner_id: athleteId,
     subscription_id: subscriptionId,
-    event_time: eventTime
+    event_time: eventTime,
   } = { ...data };
 
-  let stravaResponse;
-  switch (aspectType) {
-    case "create":
-      // todo : do something in here
-      const { data: activity } =
-        (await fetchActivity(objectId, athleteId)) || "something is not right";
-      for (let segment of activity["segment_efforts"]) {
-        if (segmentIds.has(segment.id)) {
-          // increment the counter
-          if (segment.id in leaderboard) {
-            let currentCount = leaderboard[segment.id][activity.athlete.id];
-            leaderboard[segment.id][activity.athlete.id] = currentCount + 1;
-          } else {
-            leaderboard[segment.id] = {};
-            leaderboard[segment.id][activity.athlete.id] = 1;
+  if (objectType !== "activity") {
+    return; // we don't do anything with "athlete" changes
+  }
+
+  const redisClient = new RedisClient();
+  const stravaClient = new StravaClient();
+
+  try {
+    switch (aspectType) {
+      case "create":
+        const activityId = objectId;
+        const athleteInfo = await redisClient.getAthlete(athleteId);
+        const { data: activity } = await stravaClient.getStravaActivity(
+          athleteInfo,
+          activityId
+        );
+        for (let effort of activity["segment_efforts"]) {
+          const segment = effort.segment;
+          if (segmentIds.has(segment.id)) {
+            try {
+              redisClient.addSegmentEffort(
+                athleteId,
+                segment.id,
+                effort["start_date_local"],
+                response => {
+                  console.log(
+                    `added segment effort ${
+                      segment["name"]
+                    } for athlete ${athleteId}`
+                  );
+                }
+              );
+            } catch (e) {
+              console.log(e.message);
+              console.log("cannot add segment effort for athlete");
+            }
           }
         }
-      }
-      res.sendStatus(200); // acknowledge
-      break;
-    default:
-      console.log("only processing create");
-      break;
+        res.sendStatus(200); // acknowledge
+        break;
+      default:
+        console.log("only processing create");
+        break;
+    }
+  } catch (e) {
+  } finally {
+    redisClient.close();
   }
 });
 
-const segmentIds = new Set([63951472299]);
-
-const leaderboard = {};
-
 module.exports = router;
-module.exports.leaderboard = leaderboard;
