@@ -53,29 +53,26 @@ const deleteSubscription = async id => {
 };
 
 // GET subscriptions
-false &&
-  axios
-    .get(
-      `${subscriptionUrl}?client_id=${clientId}&client_secret=${clientSecret}`
-    )
-    .then(async res => {
-      if (res.data.length < 1) {
-        const responseBody = await newSubscription();
-        console.log(responseBody);
-      } else {
-        const sub = res.data[0];
-        // DELETE subscriptions
-        await deleteSubscription(sub.id);
-        // POST subscription
-        const { success } = { ...(await newSubscription()) };
-        if (success) {
-          console.log("NEW SUBSCRIPTION CREATED");
-        }
+axios
+  .get(`${subscriptionUrl}?client_id=${clientId}&client_secret=${clientSecret}`)
+  .then(async res => {
+    if (res.data.length < 1) {
+      const responseBody = await newSubscription();
+      console.log(responseBody);
+    } else {
+      const sub = res.data[0];
+      // DELETE subscriptions
+      await deleteSubscription(sub.id);
+      // POST subscription
+      const { success } = { ...(await newSubscription()) };
+      if (success) {
+        console.log("NEW SUBSCRIPTION CREATED");
       }
-    })
-    .catch(res => {
-      console.log(res);
-    });
+    }
+  })
+  .catch(res => {
+    console.log(res);
+  });
 
 /**
  *

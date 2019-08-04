@@ -7,7 +7,7 @@ const Keys = {
 };
 
 class RedisDatabase {
-  constructor(host = process.env.REDIS_HOST, port = 6379) {
+  constructor(host = process.env.REDIS_URL, port = 6379) {
     try {
       this._client = redis.createClient({
         host: host,
