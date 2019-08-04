@@ -23,7 +23,7 @@ class RedisDatabase {
     });
 
     this._client.on("ready", () => {
-      console.log("REDIS CONNECTED");
+      // console.log("REDIS CONNECTED");
     });
   }
 
@@ -31,7 +31,9 @@ class RedisDatabase {
   close() {
     this._client.quit((err, response) => {
       if (!err) {
-        console.log("REDIS DISCONNECTED");
+        // console.log("REDIS DISCONNECTED");
+      } else {
+        console.log(err);
       }
     });
   }
@@ -155,7 +157,11 @@ class RedisDatabase {
           console.log(err);
           reject();
         } else {
-          resolve(response);
+          resolve({
+            athleteId: athleteId,
+            segmentId: segmentId,
+            efforts: response,
+          });
         }
       });
     });
@@ -199,7 +205,9 @@ class StravaClient {
     };
 
     // check whether the athlete token is expired :
-    if (moment(Number(expiresAt)).toDate() < moment(new Date() / 1000).toDate()) {
+    if (
+      moment(Number(expiresAt)).toDate() < moment(new Date() / 1000).toDate()
+    ) {
       // if expired
       const newAccessToken = await this._refreshTokenFunc(
         athlete.id,

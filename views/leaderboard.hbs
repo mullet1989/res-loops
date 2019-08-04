@@ -1,6 +1,32 @@
+<a href="https://www.strava.com/segments/{{segment.id}}" target="_blank">
+    {{segment.name}}
+</a>
 
-segment_id : {{segment}}
+<table>
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Number Efforts</th>
+    </tr>
+    </thead>
 
-{{athletes}}
+    <tbody>
+    {{#each athletes}}
+        <tr>
+            <td>{{firstName}} {{lastName}}
+                {{#if (eq @index 0)}}
+                    🥇
+                {{else if (eq @index 1)}}
+                    🥈
+                {{else if (eq @index 2)}}
+                    🥉
+                {{/if}}
+            </td>
+            <td>{{efforts.length}}</td>
+        </tr>
 
-{{efforts}}
+    {{/each}}
+    </tbody>
+
+</table>
+

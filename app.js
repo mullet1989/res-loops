@@ -9,6 +9,7 @@ var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 var webhookRouter = require("./routes/webhook");
 var authRouter = require("./routes/auth");
+var hbs = require("hbs");
 
 var app = express();
 
@@ -42,6 +43,10 @@ app.use(function(err, req, res, next) {
   // render the error page
   res.status(err.status || 500);
   res.render("error");
+});
+
+hbs.registerHelper("eq", function(arg1, arg2) {
+  return arg1 == arg2;
 });
 
 module.exports = app;

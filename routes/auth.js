@@ -25,7 +25,7 @@ router.get("/", async (req, res, next) => {
 
     if (authResponse) {
       console.log(JSON.stringify(athlete));
-      res.redirect("/leaderboard/63951472299");
+      res.redirect("/leaderboard/968350");
     } else {
       console.log(e);
       res.redirect("/error");

@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { RedisClient } = require("../database");
+const { SegmentIds } = require("./webhook");
 
 /* GET home page. */
 router.get("/", function(req, res, next) {
@@ -20,24 +21,35 @@ router.get("/leaderboard/:id", async function(req, res, next) {
     const allAthletes = await Promise.all(
       allAthleteIds.map(x => redisClient.getAthlete(x))
     );
+    // make lookup for athletes
+    const athleteMap = new Map();
+    for (let a of allAthletes) {
+      athleteMap.set(a.id, { firstName: a.firstname, lastName: a.lastname });
+    }
 
-    const allAthleteSegmentEffots = await Promise.all(
+    const allAthleteSegmentEfforts = await Promise.all(
       allAthleteIds.map(x =>
         redisClient.getSegmentEffortsForAthleteSegmentByDateRange(x, segmentId)
       )
     );
 
-    res.render("leaderboard", {
-      athletes: JSON.stringify(
-        allAthletes.map(a => {
-          return {
-            firstName: a.firstname,
-            lastName: a.lastname,
-          };
-        })
-      ),
-      segment: segmentId,
-      efforts: JSON.stringify(allAthleteSegmentEffots),
+    let result = [];
+    for (let effort of allAthleteSegmentEfforts) {
+      const athleteInfo = athleteMap.get(effort.athleteId);
+      result.push({ ...athleteInfo, ...effort });
+    }
+
+    result.sort((a, b) => {
+      if (a.efforts.length < b.efforts.length) {
+        return 1;
+      }
+
+      return -1;
+    });
+
+    res.render("leaderboard.hbs", {
+      segment: { name: SegmentIds[segmentId], id: segmentId },
+      athletes: result,
     });
   } catch (e) {
     console.log(e);

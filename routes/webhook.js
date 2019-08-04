@@ -8,8 +8,11 @@ const subscriptionUrl = "https://api.strava.com/api/v3/push_subscriptions";
 const clientId = 563;
 const clientSecret = process.env.CLIENT_SECRET || "";
 
-// todo : populate all the segments in here
-const segmentIds = new Set([853217]);
+// segment_ids
+const SegmentIds = {
+  853217: "CCW BPN",
+  968350: "BPN",
+};
 
 const newSubscription = async () => {
   return new Promise((resolve, reject) => {
@@ -100,7 +103,7 @@ router.get("/", function(req, res, next) {
 });
 
 router.post("/", async (req, res, next) => {
-  console.log("webhook event received!", req.query, req.body);
+  console.log("webhook event received!");
 
   const data = req.body;
   const {
@@ -112,6 +115,8 @@ router.post("/", async (req, res, next) => {
     subscription_id: subscriptionId,
     event_time: eventTime,
   } = { ...data };
+
+  console.log(updates);
 
   if (objectType !== "activity") {
     return; // we don't do anything with "athlete" changes
@@ -125,13 +130,18 @@ router.post("/", async (req, res, next) => {
       case "create":
         const activityId = objectId;
         const athleteInfo = await redisClient.getAthlete(athleteId);
+        if (!athleteInfo) {
+          break;
+        }
+
         const { data: activity } = await stravaClient.getStravaActivity(
           athleteInfo,
           activityId
         );
+
         for (let effort of activity["segment_efforts"]) {
           const segment = effort.segment;
-          if (segmentIds.has(segment.id)) {
+          if (segment.id in SegmentIds) {
             try {
               redisClient.addSegmentEffort(
                 athleteId,
@@ -158,9 +168,11 @@ router.post("/", async (req, res, next) => {
         break;
     }
   } catch (e) {
+    console.log(e);
   } finally {
     redisClient.close();
   }
 });
 
 module.exports = router;
+module.exports.SegmentIds = SegmentIds;
