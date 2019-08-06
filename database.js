@@ -238,8 +238,10 @@ class StravaClient {
 
       const redisClient = new RedisDatabase(); // it's call diff :derp:
       try {
+        console.log("updating token");
         await redisClient.updateAthleteToken(athlete.id, data);
       } catch (e) {
+        console.log("error updating token");
         console.log(e);
       } finally {
         redisClient.close();
@@ -264,6 +266,7 @@ class StravaClient {
   }
 
   async _refreshTokenFunc(athleteId, refreshToken) {
+    console.log("refreshing token");
     const stravaResponse = await axios.post(
       `https://www.strava.com/oauth/token`,
       {

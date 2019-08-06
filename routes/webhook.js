@@ -115,7 +115,10 @@ router.post("/", async (req, res, next) => {
     event_time: eventTime,
   } = { ...data };
 
-  console.log(updates);
+  // is not empty
+  if (Object.entries(updates).length !== 0 || updates.constructor !== Object) {
+    console.log(updates);
+  }
 
   if (objectType !== "activity") {
     return; // we don't do anything with "athlete" changes
@@ -129,7 +132,11 @@ router.post("/", async (req, res, next) => {
       case "create":
         const activityId = objectId;
         const athleteInfo = await redisClient.getAthlete(athleteId);
-        if (!athleteInfo) {
+        // if this is empty object
+        if (
+          Object.entries(athleteInfo).length === 0 &&
+          athleteInfo.constructor === Object
+        ) {
           break;
         }
 
