@@ -73,6 +73,36 @@ class RedisDatabase {
     });
   }
 
+  async updateAthleteToken(athleteId, data) {
+    return new Promise((resolve, reject) => {
+      const {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_at: expiresAt,
+      } = { ...data };
+
+      try {
+        const args = [
+          `athlete_${athleteId}`,
+          "access_token",
+          accessToken,
+          "refresh_token",
+          refreshToken,
+          "expires_at",
+          expiresAt,
+        ];
+        this._client.send_command("HMSET", args, (err, response) => {
+          if (err) {
+            console.log(err);
+            reject();
+          } else {
+            resolve();
+          }
+        });
+      } catch (e) {}
+    });
+  }
+
   async getAthlete(athleteId) {
     return new Promise((resolve, reject) => {
       const args = [`athlete_${athleteId}`];
@@ -99,8 +129,6 @@ class RedisDatabase {
         }
       });
     });
-
-    // todo : get the accumulated number
   }
 
   addSegmentEffort(athleteId, segmentId, time, cb = () => {}) {
@@ -206,11 +234,17 @@ class StravaClient {
       moment(Number(expiresAt)).toDate() < moment(new Date() / 1000).toDate()
     ) {
       // if expired
-      const newAccessToken = await this._refreshTokenFunc(
-        athlete.id,
-        refreshToken
-      );
-      // update the athlete token collection
+      const data = await this._refreshTokenFunc(athlete.id, refreshToken);
+
+      const redisClient = new RedisDatabase(); // it's call diff :derp:
+      try {
+        await redisClient.updateAthleteToken(athlete.id, data);
+      } catch (e) {
+        console.log(e);
+      } finally {
+        redisClient.close();
+      }
+
       accessToken = newAccessToken;
     }
 
@@ -240,20 +274,8 @@ class StravaClient {
       }
     );
     const data = stravaResponse.data;
-    const {
-      access_token: newAccessToken,
-      refresh_token: newRefreshToken,
-      expires_at: newExpiresAt,
-    } = { ...data };
 
-    athleteTokens.addOrUpdateToken({
-      id: athleteId,
-      refresh_token: newRefreshToken,
-      access_token: newAccessToken,
-      expires_at: newExpiresAt,
-    });
-
-    return newAccessToken;
+    return data;
   }
 }
 
