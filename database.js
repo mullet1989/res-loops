@@ -96,6 +96,7 @@ class RedisDatabase {
             console.log(err);
             reject();
           } else {
+            console.log(`updated token for athleteId: ${athleteId}`);
             resolve();
           }
         });
@@ -224,21 +225,18 @@ class StravaClient {
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_at: expiresAt,
-      athlete,
+      ...athlete
     } = {
       ...athleteInfo,
     };
 
     // check whether the athlete token is expired :
-    if (
-      moment(Number(expiresAt)).toDate() < moment(new Date() / 1000).toDate()
-    ) {
+    if (moment.unix(Number(expiresAt)).toDate() < new Date()) {
       // if expired
       const data = await this._refreshTokenFunc(athlete.id, refreshToken);
 
       const redisClient = new RedisDatabase(); // it's call diff :derp:
       try {
-        console.log("updating token");
         await redisClient.updateAthleteToken(athlete.id, data);
       } catch (e) {
         console.log("error updating token");
@@ -246,6 +244,8 @@ class StravaClient {
       } finally {
         redisClient.close();
       }
+
+      const { access_token: newAccessToken } = { ...data };
 
       accessToken = newAccessToken;
     }

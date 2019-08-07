@@ -55,26 +55,30 @@ const deleteSubscription = async id => {
 };
 
 // GET subscriptions
-axios
-  .get(`${subscriptionUrl}?client_id=${clientId}&client_secret=${clientSecret}`)
-  .then(async res => {
-    if (res.data.length < 1) {
-      const responseBody = await newSubscription();
-      console.log(responseBody);
-    } else {
-      const sub = res.data[0];
-      // DELETE subscriptions
-      await deleteSubscription(sub.id);
-      // POST subscription
-      const { success } = { ...(await newSubscription()) };
-      if (success) {
-        console.log("NEW SUBSCRIPTION CREATED");
+if (process.env.NODE_ENV === "development") {
+  axios
+    .get(
+      `${subscriptionUrl}?client_id=${clientId}&client_secret=${clientSecret}`
+    )
+    .then(async res => {
+      if (res.data.length < 1) {
+        const responseBody = await newSubscription();
+        console.log(responseBody);
+      } else {
+        const sub = res.data[0];
+        // DELETE subscriptions
+        await deleteSubscription(sub.id);
+        // POST subscription
+        const { success } = { ...(await newSubscription()) };
+        if (success) {
+          console.log("NEW SUBSCRIPTION CREATED");
+        }
       }
-    }
-  })
-  .catch(res => {
-    console.log(res);
-  });
+    })
+    .catch(res => {
+      console.log(res);
+    });
+}
 
 /**
  *
@@ -116,7 +120,10 @@ router.post("/", async (req, res, next) => {
   } = { ...data };
 
   // is not empty
-  if (Object.entries(updates).length !== 0 || updates.constructor !== Object) {
+  if (
+    updates &&
+    (Object.entries(updates).length !== 0 || updates.constructor !== Object)
+  ) {
     console.log(updates);
   }
 
@@ -134,8 +141,9 @@ router.post("/", async (req, res, next) => {
         const athleteInfo = await redisClient.getAthlete(athleteId);
         // if this is empty object
         if (
-          Object.entries(athleteInfo).length === 0 &&
-          athleteInfo.constructor === Object
+          athleteInfo &&
+          (Object.entries(athleteInfo).length === 0 &&
+            athleteInfo.constructor === Object)
         ) {
           break;
         }
