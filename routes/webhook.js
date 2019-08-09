@@ -135,7 +135,6 @@ router.post("/", async (req, res, next) => {
         const athleteInfo = await redisClient.getAthlete(athleteId);
 
         if (athleteInfo === null) {
-          res.sendStatus(200); // acknowledge
           break;
         }
 
@@ -166,7 +165,6 @@ router.post("/", async (req, res, next) => {
             }
           }
         }
-        res.sendStatus(200); // acknowledge
         break;
       default:
         console.log("only processing create");
@@ -177,6 +175,7 @@ router.post("/", async (req, res, next) => {
   } finally {
     redisClient.close();
   }
+  res.sendStatus(200); // acknowledge
 });
 
 module.exports = router;
