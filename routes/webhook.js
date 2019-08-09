@@ -106,8 +106,6 @@ router.get("/", function(req, res, next) {
 });
 
 router.post("/", async (req, res, next) => {
-  console.log("webhook event received!");
-
   const data = req.body;
   const {
     object_type: objectType,
@@ -119,7 +117,7 @@ router.post("/", async (req, res, next) => {
     event_time: eventTime,
   } = { ...data };
 
-  updates && console.log(`uodates : ${updates}`);
+  updates && console.log(`uodates : ${JSON.stringify(updates)}`);
 
   if (objectType !== "activity") {
     return; // we don't do anything with "athlete" changes
