@@ -251,6 +251,9 @@ class StravaClient {
     }
 
     try {
+      console.log(
+        `fetching activity ${activityId} for athlete : ${athlete.id}`
+      );
       // returns a promise
       return axios.get(
         `https://www.strava.com/api/v3/activities/${activityId}?include_all_efforts=true`, // make sure to get all efforts

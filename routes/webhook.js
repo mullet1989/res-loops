@@ -117,11 +117,12 @@ router.post("/", async (req, res, next) => {
     event_time: eventTime,
   } = { ...data };
 
-  updates && console.log(`uodates : ${JSON.stringify(updates)}`);
-
   if (objectType !== "activity") {
     return; // we don't do anything with "athlete" changes
   }
+
+  console.log(`new webhook for ${athleteId}`);
+  updates && console.log(`updates : ${JSON.stringify(updates)}`);
 
   const redisClient = new RedisClient();
   const stravaClient = new StravaClient();
