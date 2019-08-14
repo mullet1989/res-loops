@@ -171,7 +171,7 @@ class RedisDatabase {
         ? moment(endDate).unix()
         : moment
             .utc()
-            .add(-5, "h") // this is the time difference
+            .add(-4, "h") // this is the time difference
             .unix();
       const args = [
         `segment_${segmentId}_athlete_${athleteId}`,
