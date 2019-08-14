@@ -12,6 +12,8 @@ const clientSecret = process.env.CLIENT_SECRET || "";
 const SegmentIds = {
   853217: "CCW BPN",
   968350: "BPN",
+  12484431: "Bridal Path Figure 8 West",
+  12534908: "Bridal Path Figure 8 East",
 };
 
 const newSubscription = async () => {
